@@ -12,7 +12,7 @@ class CartItem {
       @required this.quantity,
       @required this.price});
 }
-
+/// Mixin is used "with ChangeNotifier"
 class Cart with ChangeNotifier {
   Map<String, CartItem> _items = {};
 

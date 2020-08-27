@@ -96,7 +96,8 @@ class AuthCard extends StatefulWidget {
   _AuthCardState createState() => _AuthCardState();
 }
 
-class _AuthCardState extends State<AuthCard> {
+class _AuthCardState extends State<AuthCard>
+    with SingleTickerProviderStateMixin {
   final GlobalKey<FormState> _formKey = GlobalKey();
   AuthMode _authMode = AuthMode.Login;
   Map<String, String> _authData = {
@@ -105,15 +106,54 @@ class _AuthCardState extends State<AuthCard> {
   };
   var _isLoading = false;
   final _passwordController = TextEditingController();
+  // Animation initialization
+  AnimationController _controller;
+  Animation<Size> _heightAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    //pointer to the current resource for vsync
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(
+        milliseconds: 600,
+      ),
+    );
+    _heightAnimation = Tween<Size>(
+      begin: Size(double.infinity, 260),
+      end: Size(double.infinity, 320),
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      ),
+    );
+    //to call the build method
+    _heightAnimation.addListener(() => setState((){}));
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
+  }
 
   void _showErrorDialog(String message) {
     showDialog(
-      context:  context,
-      builder: (ctx) => AlertDialog(title: Text('An Error Occured!'), content: Text(message), actions: <Widget>[
-        FlatButton(onPressed: () {
-          Navigator.of(ctx).pop();
-        }, child: Text('Okay'),)
-      ],),
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('An Error Occured!'),
+        content: Text(message),
+        actions: <Widget>[
+          FlatButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+            },
+            child: Text('Okay'),
+          )
+        ],
+      ),
     );
   }
 
@@ -126,35 +166,34 @@ class _AuthCardState extends State<AuthCard> {
     setState(() {
       _isLoading = true;
     });
-    try{
+    try {
       if (_authMode == AuthMode.Login) {
         // Log user in
-        await Provider.of<Auth>(context,listen: false).login(
+        await Provider.of<Auth>(context, listen: false).login(
           _authData['email'],
           _authData['password'],
         );
       } else {
         // Sign user up
-        await Provider.of<Auth>(context,listen: false).signup(
+        await Provider.of<Auth>(context, listen: false).signup(
           _authData['email'],
           _authData['password'],
         );
       }
-    } on HttpException catch(error) {
+    } on HttpException catch (error) {
       var errorMessage = 'Authentication Failed';
-      if(error.toString().contains('EMAIL_EXISTS')) {
+      if (error.toString().contains('EMAIL_EXISTS')) {
         errorMessage = 'This email address is already in use.';
-      } else if(error.toString().contains('INVALID_EMAIL')) {
+      } else if (error.toString().contains('INVALID_EMAIL')) {
         errorMessage = 'This is not a valid address.';
-      } else if(error.toString().contains('WEAK_PASSWORD')) {
+      } else if (error.toString().contains('WEAK_PASSWORD')) {
         errorMessage = 'This password is too weak.';
-      } else if(error.toString().contains('EMAIL_NOT_FOUND')) {
+      } else if (error.toString().contains('EMAIL_NOT_FOUND')) {
         errorMessage = 'Could not find a user with that email.';
-      } else if(error.toString().contains('INVALID_PASSWORD')) {
+      } else if (error.toString().contains('INVALID_PASSWORD')) {
         errorMessage = 'Invalid password.';
       }
       _showErrorDialog(errorMessage);
-
     } catch (error) {
       const errorMessage = 'Could not authenticate you. Please try again later';
       _showErrorDialog(errorMessage);
@@ -170,10 +209,14 @@ class _AuthCardState extends State<AuthCard> {
       setState(() {
         _authMode = AuthMode.Signup;
       });
+      //Animation
+      _controller.forward();
     } else {
       setState(() {
         _authMode = AuthMode.Login;
       });
+      //Animation
+      _controller.reverse();
     }
   }
 
@@ -186,9 +229,11 @@ class _AuthCardState extends State<AuthCard> {
       ),
       elevation: 8.0,
       child: Container(
-        height: _authMode == AuthMode.Signup ? 320 : 260,
+        //height: _authMode == AuthMode.Signup ? 320 : 260,//(changing this to animation)
+        height: _heightAnimation.value.height,
         constraints:
-            BoxConstraints(minHeight: _authMode == AuthMode.Signup ? 320 : 260),
+            //BoxConstraints(minHeight: _authMode == AuthMode.Signup ? 320 : 260),
+            BoxConstraints(minHeight: _heightAnimation.value.height),
         width: deviceSize.width * 0.75,
         padding: EdgeInsets.all(16.0),
         child: Form(
